@@ -5,22 +5,58 @@
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* FullCalendar dark theme for .fc-dark container */
+.fc-dark .fc {
+  background: #111 !important;
+  color: #fff !important;
+}
+.fc-dark .fc-toolbar,
+.fc-dark .fc-col-header-cell,
+.fc-dark .fc-daygrid-day,
+.fc-dark .fc-timegrid-slot,
+.fc-dark .fc-timegrid-axis {
+  background: #181818 !important;
+  color: #fff !important;
+  border-color: #333 !important;
+}
+.fc-dark .fc-button {
+  background: #222 !important;
+  color: #fff !important;
+  border: 1px solid #444 !important;
+}
+.fc-dark .fc-button-primary:not(:disabled).fc-button-active,
+.fc-dark .fc-button-primary:not(:disabled):active {
+  background: #444 !important;
+  color: #fff !important;
+}
+.fc-dark .fc-event {
+  background: #333 !important;
+  color: #fff !important;
+  border: 1px solid #555 !important;
+}
+.fc-dark .fc-day-today {
+  background: #222 !important;
+}
+.fc-dark .fc-scrollgrid {
+  border-color: #333 !important;
+}
+.fc-dark .fc-timegrid-slot-label {
+  color: #bbb !important;
+}
+.fc-dark .fc-timegrid-slot {
+  background: #181818 !important;
+}
+.fc-dark .fc-daygrid-day-number {
+  color: #fff !important;
 }

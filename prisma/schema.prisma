@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Article {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  cover     String
+  tags      String
+  authorId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  User      User?    @relation(fields: [authorId], references: [id])
+}
+
+model User {
+  id             String    @id
+  providerName   String?
+  providerUserId String?
+  nickname       String    @default("User")
+  email          String    @unique
+  password       String?
+  avatar         String?
+  emailVerified  Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime
+  Article        Article[]
+}
+
+model product {
+  product_id  Int      @id @default(autoincrement())
+  name        String?  @db.VarChar(255)
+  description String?
+  price       Decimal? @db.Decimal(10, 2)
+  category    String?  @db.VarChar(50)
+}
+
+model Coach {
+  id      String   @id @default(uuid())
+  name    String
+  notes   String?
+  lessons Lesson[]
+  availableSlots CoachAvailableSlot[]
+  coachStudentRelations CoachStudentRelation[]
+}
+
+model Student {
+  id      String   @id @default(uuid())
+  name    String
+  phone   String
+  member_id String
+  notes   String?
+  lessons Lesson[]
+  unavailableTimes StudentUnavailableTime[]
+  coachStudentRelations CoachStudentRelation[]
+}
+
+model CoachStudentRelation {
+  coach_id   String
+  student_id String
+  coach      Coach   @relation(fields: [coach_id], references: [id])
+  student    Student @relation(fields: [student_id], references: [id])
+  @@id([coach_id, student_id])
+}
+
+model Lesson {
+  id         String   @id @default(uuid())
+  coach_id   String
+  student_id String
+  start_time DateTime
+  end_time   DateTime
+  created_at DateTime @default(now())
+  coach      Coach    @relation(fields: [coach_id], references: [id])
+  student    Student  @relation(fields: [student_id], references: [id])
+}
+
+model StudentUnavailableTime {
+  id         String   @id @default(uuid())
+  student_id String
+  date       DateTime
+  student    Student @relation(fields: [student_id], references: [id])
+}
+
+model CoachAvailableSlot {
+  id         String   @id @default(uuid())
+  coach_id   String
+  date       DateTime
+  start_time DateTime
+  end_time   DateTime
+  coach      Coach    @relation(fields: [coach_id], references: [id])
+}
