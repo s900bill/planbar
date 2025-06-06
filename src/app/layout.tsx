@@ -1,18 +1,13 @@
 "use client";
 
 import React from "react";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
@@ -25,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="bg-black">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-black`}
+        className={`${inter.variable} antialiased bg-black`}
       >
         {/* 導航列統一樣式 */}
         <nav className="fixed top-0 left-0 w-full flex gap-4 px-8 py-4 bg-black border-b border-gray-800 z-40 text-gray-300 text-base">
