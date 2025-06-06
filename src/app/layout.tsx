@@ -5,6 +5,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Head from "next/head";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -18,7 +19,12 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   return (
-    <html lang="en" className="bg-black">
+    <html lang="zh-TW" className="bg-black">
+      <Head>
+        <title>Planbar 行事曆</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href="/favicon.ico" />
+      </Head>
       <body
         className={`${inter.variable} antialiased bg-black`}
       >
@@ -55,7 +61,11 @@ export default function RootLayout({
             學生管理
           </Link>
         </nav>
-        <div className="pt-20 bg-black">{children}</div>
+        <div className="pt-20 bg-black min-h-screen">
+          <div className="max-w-4xl mx-auto px-2 sm:px-4 md:px-8">
+            {children}
+          </div>
+        </div>
         {/* 版權聲明 */}
         <footer className="w-full text-center text-xs text-gray-500 py-4 border-t border-gray-800  bg-black">
           &copy; {new Date().getFullYear()} s900bill. All rights reserved.

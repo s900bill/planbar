@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
@@ -111,6 +111,26 @@ export default function CalendarView({
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
   const [infoEvent, setInfoEvent] = useState<LessonEvent | null>(null);
   const [loading, setLoading] = useState(false);
+  const [calendarHeight, setCalendarHeight] = useState(650);
+  const [aspectRatio, setAspectRatio] = useState(1.35);
+  const [maxEvents, setMaxEvents] = useState(4);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 640) {
+        setCalendarHeight(400); // 手機用固定數字
+        setAspectRatio(0.7);
+        setMaxEvents(2);
+      } else {
+        setCalendarHeight(650);
+        setAspectRatio(1.35);
+        setMaxEvents(4);
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const handleEdit = async (lessonId: string) => {
     setLoading(true);
@@ -485,21 +505,32 @@ export default function CalendarView({
           select={handleSelect}
           slotEventOverlap={false}
           eventMaxStack={3}
+          height={calendarHeight}
+          aspectRatio={aspectRatio}
+          dayMaxEvents={maxEvents}
           headerToolbar={{
-            left: "prev,next today",
-            center: "title",
-            right: "timeGridWeek,timeGridDay",
+            left: typeof window !== 'undefined' && window.innerWidth < 640 ? "prev,next today" : "prev,next today",
+            center: typeof window !== 'undefined' && window.innerWidth < 640 ? "title" : "title",
+            right:
+              typeof window !== 'undefined' && window.innerWidth < 640
+                ? "dayGridMonth,timeGridWeek"
+                : "dayGridMonth,timeGridWeek,timeGridDay",
           }}
-          events={events.map((e) => ({
-            ...e,
-            display: "block",
-            coach_id: e.coach_id,
-            student_id: e.student_id,
-            extendedProps: {
-              coachName: getCoachName(e.coach_id),
-              studentName: getStudentName(e.student_id),
-            },
-          }))}
+          dayMaxEventRows={true}
+          eventContent={(arg) => {
+            return (
+              <div className="truncate max-w-[110px] sm:max-w-[180px] text-xs sm:text-sm">
+                <div className="fc-event-title font-bold truncate">
+                  {arg.event.extendedProps.coachName} / {arg.event.extendedProps.studentName}
+                </div>
+                <div>
+                  {new Date(arg.event.startStr).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false })}
+                  -
+                  {new Date(arg.event.endStr).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false })}
+                </div>
+              </div>
+            );
+          }}
           editable={true}
           dateClick={handleDateClick}
           eventDrop={async (info) => {
@@ -554,30 +585,6 @@ export default function CalendarView({
             hour12: false,
           }}
           allDaySlot={false}
-          eventContent={(arg) => {
-            // 只顯示主要資訊，hover/點擊看詳細
-            return (
-              <div className="truncate max-w-[110px]">
-                <div className="fc-event-title font-bold text-xs truncate">
-                  {arg.event.extendedProps.coachName} /{" "}
-                  {arg.event.extendedProps.studentName}
-                </div>
-                <div className="text-xs">
-                  {new Date(arg.event.startStr).toLocaleTimeString("zh-TW", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: false,
-                  })}
-                  -
-                  {new Date(arg.event.endStr).toLocaleTimeString("zh-TW", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: false,
-                  })}
-                </div>
-              </div>
-            );
-          }}
           eventClick={(info) => {
             setInfoEvent(getEventDetail(info.event.id));
             setInfoDialogOpen(true);
