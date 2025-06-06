@@ -100,6 +100,13 @@ export default function HomePage() {
           </div>
         ) : (
           <>
+            {/* 統計與未排課區塊 */}
+            <UnassignedStudents students={students} events={events} />
+            <LessonStats
+              events={events}
+              coaches={coaches}
+              students={students}
+            />
             {/* 篩選器 */}
             <div className="flex flex-col gap-2 mb-4 p-4 bg-gray-900 border border-gray-700 rounded">
               <div className="font-bold text-gray-200 mb-1">課程篩選</div>
@@ -130,9 +137,7 @@ export default function HomePage() {
                 </select>
               </div>
             </div>
-            {/* 統計與未排課區塊 */}
-            <UnassignedStudents students={students} events={events} />
-            <LessonStats events={events} coaches={coaches} students={students} />
+
             <div className="bg-gray-900 border border-gray-700 rounded-xl p-2">
               <CalendarView
                 coaches={coaches}

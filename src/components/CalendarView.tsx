@@ -91,8 +91,6 @@ export default function CalendarView({
   events,
   onEventsChange,
 }: CalendarViewProps) {
-  console.log("CalendarView events", events);
-
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     coach_id: "",
@@ -114,9 +112,11 @@ export default function CalendarView({
   const [calendarHeight, setCalendarHeight] = useState(650);
   const [aspectRatio, setAspectRatio] = useState(1.35);
   const [maxEvents, setMaxEvents] = useState(4);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
       if (window.innerWidth < 640) {
         setCalendarHeight(400); // 手機用固定數字
         setAspectRatio(0.7);
@@ -296,7 +296,7 @@ export default function CalendarView({
               ))}
             </select>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <CalendarDateTimePicker
               value={formData.start_time}
               onChange={(val: string) =>
@@ -482,6 +482,7 @@ export default function CalendarView({
           <div className="w-16 h-16 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
+      {/* 放大 FullCalendar 事件框與字體 */}
       <style>{`
         /* 放大 FullCalendar 事件框與字體 */
         .fc-dark .fc-event {
@@ -492,106 +493,165 @@ export default function CalendarView({
           box-shadow: 0 2px 8px #0002;
           cursor: pointer;
         }
-      
-  
-     
       `}</style>
-      <div className="fc-dark">
-        <FullCalendar
-          plugins={[timeGridPlugin, interactionPlugin]}
-          initialView="timeGridWeek"
-          locale="zh-tw"
-          selectable={true}
-          select={handleSelect}
-          slotEventOverlap={false}
-          eventMaxStack={3}
-          height={calendarHeight}
-          aspectRatio={aspectRatio}
-          dayMaxEvents={maxEvents}
-          headerToolbar={{
-            left: typeof window !== 'undefined' && window.innerWidth < 640 ? "prev,next today" : "prev,next today",
-            center: typeof window !== 'undefined' && window.innerWidth < 640 ? "title" : "title",
-            right:
-              typeof window !== 'undefined' && window.innerWidth < 640
-                ? "dayGridMonth,timeGridWeek"
-                : "dayGridMonth,timeGridWeek,timeGridDay",
-          }}
-          dayMaxEventRows={true}
-          eventContent={(arg) => {
-            return (
-              <div className="truncate max-w-[110px] sm:max-w-[180px] text-xs sm:text-sm">
-                <div className="fc-event-title font-bold truncate">
-                  {arg.event.extendedProps.coachName} / {arg.event.extendedProps.studentName}
+      {/* 手機版顯示課表列表，桌機版顯示行事曆 */}
+      {isMobile ? (
+        <div className="space-y-4">
+          <h2 className="text-lg font-bold mb-2">課表列表</h2>
+          <div className="divide-y divide-gray-700">
+            {events.length === 0 && (
+              <div className="py-4 text-center">目前沒有課程</div>
+            )}
+            {events.map((ev) => (
+              <div key={ev.id} className="py-3 flex flex-col gap-1">
+                <div className="font-bold">
+                  {getCoachName(ev.coach_id)} / {getStudentName(ev.student_id)}
                 </div>
                 <div>
-                  {new Date(arg.event.startStr).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false })}
-                  -
-                  {new Date(arg.event.endStr).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false })}
+                  {new Date(ev.start).toLocaleString("zh-TW", {
+                    hour12: false,
+                  })}{" "}
+                  ~{" "}
+                  {new Date(ev.end).toLocaleString("zh-TW", {
+                    hour12: false,
+                  })}
+                </div>
+                <div className="flex gap-2 mt-1">
+                  <button
+                    className="bg-blue-600 text-white rounded px-3 py-1 text-xs hover:bg-blue-700"
+                    onClick={() => handleEdit(ev.id)}
+                  >
+                    編輯
+                  </button>
+                  <button
+                    className="bg-red-600 text-white rounded px-3 py-1 text-xs hover:bg-red-700"
+                    onClick={() => {
+                      setSelectedEventId(ev.id);
+                      setDialogType("delete");
+                      setDialogOpen(true);
+                    }}
+                  >
+                    刪除
+                  </button>
                 </div>
               </div>
-            );
-          }}
-          editable={true}
-          dateClick={handleDateClick}
-          eventDrop={async (info) => {
-            setLoading(true);
-            try {
-              await updateLessonApi(info.event.id, {
-                coach_id:
-                  info.event.extendedProps.coach_id ||
-                  info.event.extendedProps.coachId ||
-                  info.event.extendedProps.coach_name ||
-                  "",
-                student_id:
-                  info.event.extendedProps.student_id ||
-                  info.event.extendedProps.studentId ||
-                  info.event.extendedProps.student_name ||
-                  "",
-                start_time: info.event.start?.toISOString(),
-                end_time: info.event.end?.toISOString(),
-              });
-              onEventsChange();
-            } finally {
-              setLoading(false);
-            }
-          }}
-          eventResize={async (info) => {
-            setLoading(true);
-            try {
-              await updateLessonApi(info.event.id, {
-                coach_id:
-                  info.event.extendedProps.coach_id ||
-                  info.event.extendedProps.coachId ||
-                  info.event.extendedProps.coach_name ||
-                  "",
-                student_id:
-                  info.event.extendedProps.student_id ||
-                  info.event.extendedProps.studentId ||
-                  info.event.extendedProps.student_name ||
-                  "",
-                start_time: info.event.start?.toISOString(),
-                end_time: info.event.end?.toISOString(),
-              });
-              onEventsChange();
-            } finally {
-              setLoading(false);
-            }
-          }}
-          slotDuration="00:30:00"
-          slotLabelInterval="01:00:00"
-          slotLabelFormat={{
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          }}
-          allDaySlot={false}
-          eventClick={(info) => {
-            setInfoEvent(getEventDetail(info.event.id));
-            setInfoDialogOpen(true);
-            info.jsEvent.preventDefault();
-          }}
-        />
-      </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="fc-dark">
+          <FullCalendar
+            plugins={[timeGridPlugin, interactionPlugin]}
+            initialView="timeGridWeek"
+            locale="zh-tw"
+            selectable={true}
+            select={handleSelect}
+            slotEventOverlap={false}
+            eventMaxStack={3}
+            height={calendarHeight}
+            aspectRatio={aspectRatio}
+            dayMaxEvents={maxEvents}
+            headerToolbar={{
+              left:
+                window.innerWidth < 640 ? "prev,next today" : "prev,next today",
+              center: window.innerWidth < 640 ? "title" : "title",
+              right:
+                window.innerWidth < 640
+                  ? "dayGridMonth,timeGridWeek"
+                  : "dayGridMonth,timeGridWeek,timeGridDay",
+            }}
+            dayMaxEventRows={true}
+            events={events}
+            eventContent={(arg) => {
+              // 只顯示主要資訊，hover/點擊看詳細
+              const coach = getCoachName(arg.event.extendedProps.coach_id);
+              const student = getStudentName(
+                arg.event.extendedProps.student_id
+              );
+              return (
+                <div className="truncate max-w-[110px] sm:max-w-[180px] text-xs sm:text-sm">
+                  <div className="fc-event-title font-bold truncate">
+                    {coach} / {student}
+                  </div>
+                  <div>
+                    {new Date(arg.event.startStr).toLocaleTimeString("zh-TW", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: false,
+                    })}
+                    -
+                    {new Date(arg.event.endStr).toLocaleTimeString("zh-TW", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: false,
+                    })}
+                  </div>
+                </div>
+              );
+            }}
+            editable={true}
+            dateClick={handleDateClick}
+            eventDrop={async (info) => {
+              setLoading(true);
+              try {
+                await updateLessonApi(info.event.id, {
+                  coach_id:
+                    info.event.extendedProps.coach_id ||
+                    info.event.extendedProps.coachId ||
+                    info.event.extendedProps.coach_name ||
+                    "",
+                  student_id:
+                    info.event.extendedProps.student_id ||
+                    info.event.extendedProps.studentId ||
+                    info.event.extendedProps.student_name ||
+                    "",
+                  start_time: info.event.start?.toISOString(),
+                  end_time: info.event.end?.toISOString(),
+                });
+                onEventsChange();
+              } finally {
+                setLoading(false);
+              }
+            }}
+            eventResize={async (info) => {
+              setLoading(true);
+              try {
+                await updateLessonApi(info.event.id, {
+                  coach_id:
+                    info.event.extendedProps.coach_id ||
+                    info.event.extendedProps.coachId ||
+                    info.event.extendedProps.coach_name ||
+                    "",
+                  student_id:
+                    info.event.extendedProps.student_id ||
+                    info.event.extendedProps.studentId ||
+                    info.event.extendedProps.student_name ||
+                    "",
+                  start_time: info.event.start?.toISOString(),
+                  end_time: info.event.end?.toISOString(),
+                });
+                onEventsChange();
+              } finally {
+                setLoading(false);
+              }
+            }}
+            slotDuration="00:30:00"
+            slotLabelInterval="01:00:00"
+            slotLabelFormat={{
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            }}
+            allDaySlot={false}
+            eventClick={(info) => {
+              setInfoEvent(getEventDetail(info.event.id));
+              setInfoDialogOpen(true);
+              info.jsEvent.preventDefault();
+            }}
+            slotMinTime="10:00:00"
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -25,9 +25,7 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <body
-        className={`${inter.variable} antialiased bg-black`}
-      >
+      <body className={`${inter.variable} antialiased bg-black`}>
         {/* 導航列統一樣式 */}
         <nav className="fixed top-0 left-0 w-full flex gap-4 px-8 py-4 bg-black border-b border-gray-800 z-40 text-gray-300 text-base">
           <Link
