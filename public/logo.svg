@@ -1,0 +1,22 @@
+<svg width="400" height="120" viewBox="0 0 400 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="planbar-gradient" x1="0" y1="0" x2="400" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#60a5fa"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="400" height="120" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <rect width="400" height="120" rx="28" fill="url(#planbar-gradient)" filter="url(#shadow)"/>
+  <text x="50%" y="54%" text-anchor="middle" fill="#fff" font-size="54" font-family="Segoe UI, Arial, sans-serif" dy=".35em" font-weight="bold" letter-spacing="2">
+    Planbar
+  </text>
+  <text x="50%" y="82%" text-anchor="middle" fill="#fff" font-size="20" font-family="Segoe UI, Arial, sans-serif" dy=".35em" opacity="0.85">
+    課程排程系統
+  </text>
+  <circle cx="60" cy="60" r="22" fill="#fff" opacity="0.12"/>
+  <rect x="320" y="30" width="40" height="12" rx="6" fill="#fff" opacity="0.18"/>
+  <rect x="320" y="50" width="28" height="12" rx="6" fill="#fff" opacity="0.12"/>
+  <rect x="320" y="70" width="20" height="12" rx="6" fill="#fff" opacity="0.10"/>
+</svg>
