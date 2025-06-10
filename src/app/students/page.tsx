@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from "react";
 import Dialog from "@/components/Dialog";
 import { HiPencil, HiTrash } from "react-icons/hi2";
+import { HiOutlineCalendarDays } from "react-icons/hi2";
+import StudentUnavailableEditor from "@/components/StudentUnavailableEditor";
 
 interface Student {
   id: string;
@@ -24,6 +26,14 @@ export default function StudentsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [unavailableDates, setUnavailableDates] = useState<string[]>([]);
+  const [unavailableEditStudent, setUnavailableEditStudent] =
+    useState<Student | null>(null);
+  const [unavailableEditDates, setUnavailableEditDates] = useState<string[]>(
+    []
+  );
+  const [unavailableEditLoading, setUnavailableEditLoading] = useState(false);
+  const [unavailableEditError, setUnavailableEditError] = useState("");
 
   // 取得學生列表
   const fetchStudents = () => {
@@ -56,8 +66,14 @@ export default function StudentsPage() {
             notes: form.notes,
           }),
         });
+        // 更新不可上課日
+        await fetch(`/api/student-unavailable-times`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ student_id: editId, dates: unavailableDates }),
+        });
       } else {
-        await fetch("/api/students", {
+        const res = await fetch("/api/students", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -67,8 +83,21 @@ export default function StudentsPage() {
             notes: form.notes,
           }),
         });
+        const student = await res.json();
+        // 新增不可上課日
+        if (student.id) {
+          await fetch(`/api/student-unavailable-times`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              student_id: student.id,
+              dates: unavailableDates,
+            }),
+          });
+        }
       }
       setForm({ id: "", name: "", phone: "", member_id: "", notes: "" });
+      setUnavailableDates([]);
       setEditId(null);
       fetchStudents();
     } catch {
@@ -87,7 +116,15 @@ export default function StudentsPage() {
       member_id: student.member_id,
       notes: student.notes || "",
     });
+    console.log(student.id);
     setEditId(student.id);
+    // 取得不可上課日
+    fetch(`/api/student-unavailable-times?student_id=${student.id}`)
+      .then((res) => res.json())
+      .then((list) =>
+        setUnavailableDates(list.map((d: any) => d.date.slice(0, 10)))
+      )
+      .catch(() => setUnavailableDates([]));
   };
 
   // 刪除學生（彈窗確認）
@@ -106,16 +143,53 @@ export default function StudentsPage() {
     }
   };
 
+  // 編輯不可上課日（打開 Dialog 並 fetch 該學生的日期）
+  const handleUnavailableEdit = (student: Student) => {
+    setUnavailableEditStudent(student);
+    setUnavailableEditLoading(true);
+    setUnavailableEditError("");
+    fetch(`/api/student-unavailable-times?student_id=${student.id}`)
+      .then((res) => res.json())
+      .then((list) =>
+        setUnavailableEditDates(list.map((d: any) => d.date.slice(0, 10)))
+      )
+      .catch(() => setUnavailableEditDates([]))
+      .finally(() => setUnavailableEditLoading(false));
+  };
+
+  // 儲存不可上課日
+  const handleUnavailableSave = async () => {
+    if (!unavailableEditStudent) return;
+    setUnavailableEditLoading(true);
+    setUnavailableEditError("");
+    try {
+      await fetch(`/api/student-unavailable-times`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          student_id: unavailableEditStudent.id,
+          dates: unavailableEditDates,
+        }),
+      });
+      setUnavailableEditStudent(null);
+      fetchStudents();
+    } catch {
+      setUnavailableEditError("儲存失敗，請稍後再試");
+    } finally {
+      setUnavailableEditLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black p-4 sm:p-10 font-[family-name:var(--font-geist-sans)]">
       <div className="max-w-4xl mx-auto grid gap-8">
         <h1 className="text-3xl font-bold text-white mb-2">學生管理</h1>
         <div className="bg-gray-900 rounded-xl shadow p-6 mb-4 border border-gray-700">
           <form
-            className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end"
+            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-start"
             onSubmit={handleSubmit}
           >
-            <div>
+            <div className="flex flex-col gap-2">
               <label className="block text-gray-200 mb-1">姓名</label>
               <input
                 className="border border-gray-700 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-600 bg-black text-white placeholder-gray-500"
@@ -128,7 +202,7 @@ export default function StudentsPage() {
                 disabled={loading}
               />
             </div>
-            <div>
+            <div className="flex flex-col gap-2">
               <label className="block text-gray-200 mb-1">電話</label>
               <input
                 className="border border-gray-700 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-600 bg-black text-white placeholder-gray-500"
@@ -141,7 +215,7 @@ export default function StudentsPage() {
                 disabled={loading}
               />
             </div>
-            <div>
+            <div className="flex flex-col gap-2">
               <label className="block text-gray-200 mb-1">會員編號</label>
               <input
                 className="border border-gray-700 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-600 bg-black text-white placeholder-gray-500"
@@ -154,7 +228,7 @@ export default function StudentsPage() {
                 disabled={loading}
               />
             </div>
-            <div>
+            <div className="flex flex-col gap-2">
               <label className="block text-gray-200 mb-1">備註</label>
               <input
                 className="border border-gray-700 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-600 bg-black text-white placeholder-gray-500"
@@ -166,7 +240,16 @@ export default function StudentsPage() {
                 disabled={loading}
               />
             </div>
-            <div className="flex gap-2 col-span-full">
+            <div className="col-span-full  mt-2">
+              <label className="block text-gray-200 mb-1">不可上課日</label>
+              {editId && (
+                <StudentUnavailableEditor
+                  value={unavailableDates}
+                  onChange={setUnavailableDates}
+                />
+              )}
+            </div>
+            <div className="flex gap-2 col-span-full mt-2">
               <button
                 type="submit"
                 className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 font-semibold flex-1 transition border border-blue-800"
@@ -236,6 +319,14 @@ export default function StudentsPage() {
                         >
                           <HiTrash size={20} />
                         </button>
+                        <button
+                          className="p-1 rounded hover:bg-yellow-900 text-yellow-400"
+                          title="編輯不可上課日"
+                          onClick={() => handleUnavailableEdit(student)}
+                          disabled={loading}
+                        >
+                          <HiOutlineCalendarDays size={20} />
+                        </button>
                       </div>
                     </div>
                     <div className="text-gray-400 text-sm truncate">
@@ -280,6 +371,48 @@ export default function StudentsPage() {
           </button>,
         ]}
       />
+      <Dialog
+        open={!!unavailableEditStudent}
+        title={
+          unavailableEditStudent
+            ? `編輯 ${unavailableEditStudent.name} 的不可上課日`
+            : ""
+        }
+        description="設定學生不可排課的日期，這些日期將會在行事曆標示且禁止排課。"
+        onClose={() => setUnavailableEditStudent(null)}
+        actions={[
+          <button
+            key="cancel"
+            className="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 text-gray-200 font-semibold border border-gray-600"
+            onClick={() => setUnavailableEditStudent(null)}
+            disabled={unavailableEditLoading}
+          >
+            取消
+          </button>,
+          <button
+            key="save"
+            className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold border border-blue-800"
+            onClick={handleUnavailableSave}
+            disabled={unavailableEditLoading}
+          >
+            儲存
+          </button>,
+        ]}
+      >
+        <div className="my-4">
+          {unavailableEditLoading ? (
+            <div className="text-gray-400">載入中...</div>
+          ) : (
+            <StudentUnavailableEditor
+              value={unavailableEditDates}
+              onChange={setUnavailableEditDates}
+            />
+          )}
+          {unavailableEditError && (
+            <div className="text-red-400 mt-2">{unavailableEditError}</div>
+          )}
+        </div>
+      </Dialog>
     </div>
   );
 }

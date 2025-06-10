@@ -1,7 +1,8 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
+import dayGridMonthPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import Dialog from "./Dialog";
 import { apiRequest } from "../services/apiService";
@@ -30,6 +31,8 @@ interface CalendarViewProps {
   students: { id: string; name: string }[];
   events: LessonEvent[];
   onEventsChange: () => void;
+  studentId: string; // 新增：目前選擇的學生 id
+  onStudentChange?: (id: string) => void; // 新增：學生切換 callback
 }
 
 // 工具函式：local datetime string 轉 UTC ISO string
@@ -85,11 +88,19 @@ async function deleteLessonApi(id: string) {
   return res.data;
 }
 
+// 新增：學生不可上課日型別
+interface StudentUnavailableDay {
+  student_id: string;
+  date: string; // yyyy-mm-dd
+}
+
 export default function CalendarView({
   coaches,
   students,
   events,
   onEventsChange,
+  studentId,
+  onStudentChange,
 }: CalendarViewProps) {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -113,6 +124,9 @@ export default function CalendarView({
   const [aspectRatio, setAspectRatio] = useState(1.35);
   const [maxEvents, setMaxEvents] = useState(4);
   const [isMobile, setIsMobile] = useState(false);
+  const [studentUnavailableDays, setStudentUnavailableDays] = useState<
+    StudentUnavailableDay[]
+  >([]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -131,6 +145,31 @@ export default function CalendarView({
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // 取得不可上課日，依賴 studentId
+  useEffect(() => {
+    if (!studentId) {
+      setStudentUnavailableDays([]);
+      return;
+    }
+    fetch(`/api/student-unavailable-times?student_id=${studentId}`)
+      .then((res) => res.json())
+      .then((list) =>
+        setStudentUnavailableDays(
+          list.map((d: any) => ({
+            student_id: d.student_id,
+            date: d.date.slice(0, 10),
+          }))
+        )
+      );
+  }, [studentId]);
+
+  // 表單開啟時自動帶入目前選擇的學生
+  useEffect(() => {
+    if (showForm && studentId) {
+      setFormData((f) => ({ ...f, student_id: studentId }));
+    }
+  }, [showForm, studentId]);
 
   const handleEdit = async (lessonId: string) => {
     setLoading(true);
@@ -162,6 +201,12 @@ export default function CalendarView({
       alert("結束時間必須大於開始時間");
       return;
     }
+    // 新增：結束時間需大於開始時間至少1小時
+    const diffMs = end.getTime() - start.getTime();
+    if (diffMs < 60 * 60 * 1000) {
+      alert("結束時間必須比開始時間晚至少1小時");
+      return;
+    }
     // 驗證教練/學生時段衝突
     const overlap = events.some((e) => {
       if (editId && e.id === editId) return false; // 編輯時排除自己
@@ -176,6 +221,11 @@ export default function CalendarView({
     });
     if (overlap) {
       alert("教練或學生在該時段已有其他課程，請選擇不重疊的時間");
+      return;
+    }
+    // 新增：不可排在學生不可上課日
+    if (isStudentUnavailable(start)) {
+      alert("該學生這天不可上課，請選擇其他日期");
       return;
     }
     setLoading(true);
@@ -251,8 +301,33 @@ export default function CalendarView({
     return students.find((s) => s.id === id)?.name || id;
   }
 
+  // 檢查該學生該天是否不可上課（用 studentId）
+  function isStudentUnavailable(date: Date) {
+    if (!studentId) return false;
+    const ymd = date.toISOString().slice(0, 10);
+    return studentUnavailableDays.some((d) => d.date === ymd);
+  }
+
+  // FullCalendar 顯示不可上課日背景
+  const unavailableBgEvents = useMemo(() => {
+    if (!studentId) return [];
+    const studentName = getStudentName(studentId);
+    return studentUnavailableDays.map((d) => ({
+      start: d.date,
+      end: d.date,
+      display: "background",
+      backgroundColor: "#ff0000", // 更深紅色
+      className: "fc-unavailable-bg", // 自訂 class
+      overlap: false,
+      rendering: "background",
+      groupId: "unavailable",
+      title: `${studentName}-不可排課`,
+      extendedProps: { isUnavailable: true, studentName },
+    }));
+  }, [studentUnavailableDays, studentId]);
+
   return (
-    <div className="max-w-4xl mx-auto bg-black text-white rounded-lg shadow p-4">
+    <div className="max-w-5xl mx-auto bg-black text-white rounded-lg shadow p-4">
       <h1 className="text-2xl font-bold mb-4 text-center text-white">
         健身課程行事曆
       </h1>
@@ -284,9 +359,10 @@ export default function CalendarView({
               className="border rounded p-2 flex-1 bg-black text-white border-gray-600"
               required
               value={formData.student_id}
-              onChange={(e) =>
-                setFormData((f) => ({ ...f, student_id: e.target.value }))
-              }
+              onChange={(e) => {
+                setFormData((f) => ({ ...f, student_id: e.target.value }));
+                if (onStudentChange) onStudentChange(e.target.value); // 通知外部
+              }}
             >
               <option value="">選擇學生</option>
               {students.map((s) => (
@@ -493,6 +569,20 @@ export default function CalendarView({
           box-shadow: 0 2px 8px #0002;
           cursor: pointer;
         }
+        /* 強制覆蓋 FullCalendar background event 為紅色，且不被 .fc-event 蓋掉 */
+        .fc-unavailable-bg:not(.fc-event),
+        .fc-unavailable-bg.fc-bg-event {
+          background: #ff0000 !important;
+          background-color: #ff0000 !important;
+          color: #fff !important;
+          opacity: 0.7 !important;
+        }
+        /* 針對 dayGrid 月檢視的格子背景 */
+        .fc-daygrid-day .fc-unavailable-bg {
+          background: #ff0000 !important;
+          background-color: #ff0000 !important;
+          opacity: 0.7 !important;
+        }
       `}</style>
       {/* 手機版顯示課表列表，桌機版顯示行事曆 */}
       {isMobile ? (
@@ -541,7 +631,7 @@ export default function CalendarView({
       ) : (
         <div className="fc-dark">
           <FullCalendar
-            plugins={[timeGridPlugin, interactionPlugin]}
+            plugins={[timeGridPlugin, interactionPlugin, dayGridMonthPlugin]}
             initialView="timeGridWeek"
             locale="zh-tw"
             selectable={true}
@@ -551,18 +641,38 @@ export default function CalendarView({
             height={calendarHeight}
             aspectRatio={aspectRatio}
             dayMaxEvents={maxEvents}
+            views={{
+              timeGridWeek: {
+                dayHeaderFormat: {
+                  month: "numeric",
+                  day: "numeric",
+                  weekday: "narrow",
+                },
+              },
+            }}
             headerToolbar={{
               left:
                 window.innerWidth < 640 ? "prev,next today" : "prev,next today",
-              center: window.innerWidth < 640 ? "title" : "title",
+
               right:
                 window.innerWidth < 640
                   ? "dayGridMonth,timeGridWeek"
                   : "dayGridMonth,timeGridWeek,timeGridDay",
             }}
             dayMaxEventRows={true}
-            events={events}
+            events={[...events, ...unavailableBgEvents]}
             eventContent={(arg) => {
+              // 新增：不可上課日顯示自訂文字
+              if (
+                arg.event.extendedProps.isUnavailable ||
+                arg.event.groupId === "unavailable"
+              ) {
+                return (
+                  <div className="text-xs font-bold text-white text-center w-full opacity-90">
+                    {arg.event.title}
+                  </div>
+                );
+              }
               // 只顯示主要資訊，hover/點擊看詳細
               const coach = getCoachName(arg.event.extendedProps.coach_id);
               const student = getStudentName(

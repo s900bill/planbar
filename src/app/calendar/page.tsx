@@ -1,7 +1,7 @@
 // 行事曆主頁，與原本 page.tsx 相同，請將原本 src/app/page.tsx 內容搬移到這裡
 
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import CalendarView from "../../components/CalendarView";
 
 // 型別最佳化
@@ -79,15 +79,23 @@ export default function HomePage() {
   }, [coaches, students]);
 
   // 篩選後的課程
-  const filteredEvents = events.filter((e) => {
-    let match = true;
-    if (selectedCoach) match = e.coach_id === selectedCoach;
-    if (selectedStudent) match = match && e.student_id === selectedStudent;
-    return match;
-  });
+  const filteredEvents = useMemo(
+    () =>
+      events.filter((e) => {
+        let match = true;
+        if (selectedCoach) match = e.coach_id === selectedCoach;
+        if (selectedStudent) match = match && e.student_id === selectedStudent;
+        return match;
+      }),
+    [events, selectedCoach, selectedStudent]
+  );
+
+  // useMemo 避免 CalendarView props reference 每次都變動
+  const memoizedCoaches = useMemo(() => coaches, [coaches]);
+  const memoizedStudents = useMemo(() => students, [students]);
 
   return (
-    <div className="min-h-screen bg-black p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+    <div className="min-h-screen bg-black p-1 pb-20 gap-16  font-[family-name:var(--font-geist-sans)]">
       <div className="w-full max-w-4xl mx-auto">
         {/* Skeleton loading */}
         {loading ? (
@@ -140,10 +148,12 @@ export default function HomePage() {
 
             <div className="bg-gray-900 border border-gray-700 rounded-xl p-2">
               <CalendarView
-                coaches={coaches}
-                students={students}
+                coaches={memoizedCoaches}
+                students={memoizedStudents}
                 events={filteredEvents}
                 onEventsChange={fetchLessons}
+                studentId={selectedStudent}
+                onStudentChange={setSelectedStudent}
               />
             </div>
           </>
@@ -197,7 +207,7 @@ function UnassignedStudents({
   if (unassigned.length === 0)
     return (
       <div className="mb-4 p-2 bg-yellow-50 border border-yellow-300 rounded flex items-center justify-between">
-        <div className="font-bold text-yellow-800 mb-1">
+        <div className="font-bold text-yellow-800">
           {month.year}年{month.month + 1}月所有學生皆有排課
         </div>
         <MonthNav month={month} onChange={handleMonthChange} />
