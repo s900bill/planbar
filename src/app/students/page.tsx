@@ -240,15 +240,17 @@ export default function StudentsPage() {
                 disabled={loading}
               />
             </div>
-            <div className="col-span-full  mt-2">
-              <label className="block text-gray-200 mb-1">不可上課日</label>
-              {editId && (
+
+            {editId && (
+              <div className="col-span-full  mt-2">
+                <label className="block text-gray-200 mb-1">不可上課日</label>
                 <StudentUnavailableEditor
                   value={unavailableDates}
                   onChange={setUnavailableDates}
                 />
-              )}
-            </div>
+              </div>
+            )}
+
             <div className="flex gap-2 col-span-full mt-2">
               <button
                 type="submit"
