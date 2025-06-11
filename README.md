@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 健身課程排程系統
 
-## Getting Started
+## 📚 學生管理
 
-First, run the development server:
+- 新增、編輯、刪除學生資料：
+  - 姓名
+  - 電話
+  - 會員編號
+  - 備註
+- 設定每位學生的「❌ 不可上課日」：
+  - 可於學生編輯表單或彈窗中直接操作
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🧑‍🏫 教練管理
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- 新增、編輯、刪除教練資料（依資料結構進行管理）
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 📅 課程行事曆（FullCalendar）
 
-To learn more about Next.js, take a look at the following resources:
+- 顯示所有課程，支援多種檢視模式：
+  - 週檢視
+  - 月檢視
+  - 日檢視
+- 支援互動操作：
+  - 拖曳調整課程時段
+  - 區域拉選安排課程
+- 行事曆內建操作功能：
+  - ➕ 新增課程
+  - ✏️ 編輯課程
+  - ❌ 刪除課程
+- 系統自動標示學生「不可上課日」，並**禁止在這些日期排課**
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## ⚠️ 課程衝突檢查
 
-## Deploy on Vercel
+- 新增或編輯課程時，系統會自動檢查是否有衝突：
+  - 教練是否已有其他課程
+  - 學生是否已排其他課程
+- 若有時間重疊，自動阻止排程，以避免課程衝堂
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🖱️ 互動式操作體驗
+
+- 行事曆支援以下互動操作：
+  - 點擊安排課程
+  - 拖曳變更時段
+  - 拉選範圍快速排課
+- 所有操作皆提供即時提示與視覺回饋，提升操作流暢度與易用性
