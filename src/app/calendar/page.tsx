@@ -21,11 +21,15 @@ export default function HomePage() {
   const [selectedCoach, setSelectedCoach] = useState<string>("");
   const [selectedStudent, setSelectedStudent] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  // 將 month 改為 currentTime
+  const [currentTime, setCurrentTime] = useState(() => new Date());
 
-  // 取得課程資料
+  // 取得課程資料（只撈當月）
   const fetchLessons = () => {
     setLoading(true);
-    fetch("/api/lessons")
+    const year = currentTime.getFullYear();
+    const month = currentTime.getMonth() + 1;
+    fetch(`/api/lessons?year=${year}&month=${month}`)
       .then((res) => res.json())
       .then((lessons) => {
         const studentMap = new Map<string, string>();
@@ -59,6 +63,7 @@ export default function HomePage() {
       .finally(() => setLoading(false));
   };
 
+  // 只在 mount 時撈 students/coaches
   useEffect(() => {
     setLoading(true);
     Promise.all([
@@ -68,15 +73,16 @@ export default function HomePage() {
       .then(([students, coaches]) => {
         setStudents(students);
         setCoaches(coaches);
+        fetchLessons();
       })
       .finally(() => setLoading(false));
   }, []);
 
-  // 當 coaches/students 變動時重新 fetch 課程
+  // 只依賴 currentTime，students/coaches 取得後才會觸發
   useEffect(() => {
     if (coaches.length && students.length) fetchLessons();
     // eslint-disable-next-line
-  }, [coaches, students]);
+  }, [currentTime]);
 
   // 篩選後的課程
   const filteredEvents = useMemo(
@@ -94,9 +100,27 @@ export default function HomePage() {
   const memoizedCoaches = useMemo(() => coaches, [coaches]);
   const memoizedStudents = useMemo(() => students, [students]);
 
+  // 新增：全域月份切換元件
+  function handleMonthChange(offset: number) {
+    setCurrentTime((prev) => {
+      const d = new Date(prev);
+      d.setMonth(d.getMonth() + offset);
+      return d;
+    });
+  }
+  const month = {
+    year: currentTime.getFullYear(),
+    month: currentTime.getMonth(),
+  };
+
   return (
     <div className="min-h-screen bg-black p-1 pb-20 gap-16  font-[family-name:var(--font-geist-sans)]">
       <div className="w-full max-w-4xl mx-auto">
+        {/* 全域月份切換 */}
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold text-white">課程行事曆</h1>
+          <MonthNav month={month} onChange={handleMonthChange} />
+        </div>
         {/* Skeleton loading */}
         {loading ? (
           <div className="space-y-6 animate-pulse">
@@ -109,11 +133,18 @@ export default function HomePage() {
         ) : (
           <>
             {/* 統計與未排課區塊 */}
-            <UnassignedStudents students={students} events={events} />
+            <UnassignedStudents
+              students={students}
+              events={events}
+              currentTime={currentTime}
+              setCurrentTime={setCurrentTime}
+              // 不再傳遞 MonthNav，僅顯示月份
+            />
             <LessonStats
               events={events}
               coaches={coaches}
               students={students}
+              currentTime={currentTime}
             />
             {/* 篩選器 */}
             <div className="flex flex-col gap-2 mb-4 p-4 bg-gray-900 border border-gray-700 rounded">
@@ -154,6 +185,8 @@ export default function HomePage() {
                 onEventsChange={fetchLessons}
                 studentId={selectedStudent}
                 onStudentChange={setSelectedStudent}
+                currentTime={currentTime}
+                onCurrentTimeChange={setCurrentTime}
               />
             </div>
           </>
@@ -163,36 +196,22 @@ export default function HomePage() {
   );
 }
 
-// 新增一個元件：顯示未排課學生
+// UnassignedStudents 支援 currentTime/state
 function UnassignedStudents({
   students,
   events,
+  currentTime,
+  setCurrentTime,
 }: {
   students: { id: string; name: string }[];
   events: LessonEvent[];
+  currentTime: Date;
+  setCurrentTime: React.Dispatch<React.SetStateAction<Date>>;
 }) {
-  // 取得目前行事曆顯示的月份
-  const [month, setMonth] = React.useState(() => {
-    const now = new Date();
-    return { year: now.getFullYear(), month: now.getMonth() };
-  });
-
-  // 提供月份切換功能
-  function handleMonthChange(offset: number) {
-    setMonth((prev) => {
-      let newMonth = prev.month + offset;
-      let newYear = prev.year;
-      if (newMonth < 0) {
-        newMonth = 11;
-        newYear -= 1;
-      } else if (newMonth > 11) {
-        newMonth = 0;
-        newYear += 1;
-      }
-      return { year: newYear, month: newMonth };
-    });
-  }
-
+  const month = {
+    year: currentTime.getFullYear(),
+    month: currentTime.getMonth(),
+  };
   const monthStart = new Date(month.year, month.month, 1);
   const monthEnd = new Date(month.year, month.month + 1, 0, 23, 59, 59);
   const assignedStudentIds = new Set(
@@ -210,7 +229,6 @@ function UnassignedStudents({
         <div className="font-bold text-yellow-800">
           {month.year}年{month.month + 1}月所有學生皆有排課
         </div>
-        <MonthNav month={month} onChange={handleMonthChange} />
       </div>
     );
   return (
@@ -219,7 +237,6 @@ function UnassignedStudents({
         <div className="font-bold text-yellow-800">
           {month.year}年{month.month + 1}月尚未排課學生：
         </div>
-        <MonthNav month={month} onChange={handleMonthChange} />
       </div>
       <div className="max-h-40 overflow-y-auto border border-yellow-200 rounded bg-yellow-100/60">
         <ul className="list-disc pl-5 text-yellow-900 text-sm">
@@ -242,16 +259,16 @@ function MonthNav({
   return (
     <div className="flex gap-2 items-center">
       <button
-        className="px-2 py-1 text-xs bg-yellow-300 text-yellow-900 font-bold rounded hover:bg-yellow-400 border border-yellow-500 shadow-sm transition"
+        className="px-2 py-1 text-xs bg-gray-700 text-white font-bold rounded hover:bg-blue-600 border border-gray-500 shadow-sm transition"
         onClick={() => onChange(-1)}
       >
         &lt;
       </button>
-      <span className="text-sm text-yellow-900 font-bold">
+      <span className="text-base text-white font-bold">
         {month.year}年{month.month + 1}月
       </span>
       <button
-        className="px-2 py-1 text-xs bg-yellow-300 text-yellow-900 font-bold rounded hover:bg-yellow-400 border border-yellow-500 shadow-sm transition"
+        className="px-2 py-1 text-xs bg-gray-700 text-white font-bold rounded hover:bg-blue-600 border border-gray-500 shadow-sm transition"
         onClick={() => onChange(1)}
       >
         &gt;
@@ -260,26 +277,24 @@ function MonthNav({
   );
 }
 
-// 顯示每個教練/學生本月已排課數
+// LessonStats 支援 currentTime
 function LessonStats({
   events,
   coaches,
   students,
+  currentTime,
 }: {
   events: LessonEvent[];
   coaches: { id: string; name: string }[];
   students: { id: string; name: string }[];
+  currentTime: Date;
 }) {
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(
-    now.getFullYear(),
-    now.getMonth() + 1,
-    0,
-    23,
-    59,
-    59
-  );
+  const month = {
+    year: currentTime.getFullYear(),
+    month: currentTime.getMonth(),
+  };
+  const monthStart = new Date(month.year, month.month, 1);
+  const monthEnd = new Date(month.year, month.month + 1, 0, 23, 59, 59);
   // 教練統計
   const coachCount = new Map<string, number>();
   // 學生統計

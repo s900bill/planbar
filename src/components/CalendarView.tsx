@@ -30,9 +30,11 @@ interface CalendarViewProps {
   coaches: { id: string; name: string }[];
   students: { id: string; name: string }[];
   events: LessonEvent[];
-  onEventsChange: () => void;
-  studentId: string; // 新增：目前選擇的學生 id
-  onStudentChange?: (id: string) => void; // 新增：學生切換 callback
+  onEventsChange: (from: string) => void;
+  studentId: string;
+  onStudentChange?: (id: string) => void;
+  currentTime: Date;
+  onCurrentTimeChange: (date: Date) => void;
 }
 
 // 工具函式：local datetime string 轉 UTC ISO string
@@ -101,6 +103,8 @@ export default function CalendarView({
   onEventsChange,
   studentId,
   onStudentChange,
+  currentTime,
+  onCurrentTimeChange,
 }: CalendarViewProps) {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -248,7 +252,7 @@ export default function CalendarView({
         start_time: "",
         end_time: "",
       });
-      onEventsChange();
+      onEventsChange("3");
     } finally {
       setLoading(false);
     }
@@ -325,6 +329,17 @@ export default function CalendarView({
       extendedProps: { isUnavailable: true, studentName },
     }));
   }, [studentUnavailableDays, studentId]);
+
+  // FullCalendar 切換月份時觸發
+  function handleDatesSet(arg: any) {
+    console.log("handleDatesSet");
+    if (
+      arg.start.getFullYear() !== currentTime.getFullYear() ||
+      arg.start.getMonth() !== currentTime.getMonth()
+    ) {
+      onCurrentTimeChange(arg.start);
+    }
+  }
 
   return (
     <div className="max-w-5xl mx-auto bg-black text-white rounded-lg shadow p-4">
@@ -530,7 +545,7 @@ export default function CalendarView({
                 onClick={async () => {
                   if (selectedEventId) {
                     await deleteLessonApi(selectedEventId);
-                    onEventsChange();
+                    onEventsChange("4");
                   }
                   setDialogOpen(false);
                   setDialogType(null);
@@ -653,13 +668,14 @@ export default function CalendarView({
             headerToolbar={{
               left:
                 window.innerWidth < 640 ? "prev,next today" : "prev,next today",
-
               right:
                 window.innerWidth < 640
                   ? "dayGridMonth,timeGridWeek"
                   : "dayGridMonth,timeGridWeek,timeGridDay",
             }}
             dayMaxEventRows={true}
+            initialDate={currentTime}
+            datesSet={handleDatesSet}
             events={[...events, ...unavailableBgEvents]}
             eventContent={(arg) => {
               // 新增：不可上課日顯示自訂文字
@@ -718,7 +734,7 @@ export default function CalendarView({
                   start_time: info.event.start?.toISOString(),
                   end_time: info.event.end?.toISOString(),
                 });
-                onEventsChange();
+                onEventsChange("5");
               } finally {
                 setLoading(false);
               }
@@ -740,7 +756,7 @@ export default function CalendarView({
                   start_time: info.event.start?.toISOString(),
                   end_time: info.event.end?.toISOString(),
                 });
-                onEventsChange();
+                onEventsChange("6");
               } finally {
                 setLoading(false);
               }
